@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { auth } from '../firebaseConfig';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { X, Mail, Lock, ArrowRight, Loader2 } from 'lucide-react';
+import { auth, db } from '../firebaseConfig';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { X, Mail, Lock, ArrowRight, Loader2, User } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -13,6 +14,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 'l
   const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -25,7 +28,21 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 'l
 
     try {
       if (mode === 'signup') {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        
+        // Update user profile with display name
+        await updateProfile(user, {
+          displayName: `${firstName} ${lastName}`
+        });
+        
+        // Store user details in Firestore
+        await setDoc(doc(db, 'users', user.uid), {
+          firstName,
+          lastName,
+          email,
+          createdAt: new Date().toISOString()
+        });
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
@@ -72,6 +89,40 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 'l
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {mode === 'signup' && (
+              <>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1 ml-1">First Name</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <input 
+                      type="text" 
+                      required
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition font-medium"
+                      placeholder="John"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1 ml-1">Last Name</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <input 
+                      type="text" 
+                      required
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition font-medium"
+                      placeholder="Doe"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+            
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1 ml-1">Email</label>
               <div className="relative">

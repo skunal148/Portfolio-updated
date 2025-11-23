@@ -10,9 +10,10 @@ interface DashboardProps {
   onView: (id: string) => void;
   onLogout: () => void;
   userEmail: string | null;
+  userName?: string;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ portfolios, onCreate, onEdit, onDelete, onView, onLogout, userEmail }) => {
+const Dashboard: React.FC<DashboardProps> = ({ portfolios, onCreate, onEdit, onDelete, onView, onLogout, userEmail, userName }) => {
   return (
     <div className="relative min-h-screen bg-gray-50 text-gray-900 overflow-hidden">
       
@@ -27,7 +28,7 @@ const Dashboard: React.FC<DashboardProps> = ({ portfolios, onCreate, onEdit, onD
               <div className="flex items-center gap-6">
                   <div className="flex items-center gap-2 text-sm font-medium text-gray-600 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
                       <User size={14} />
-                      {userEmail}
+                      {userName || userEmail}
                   </div>
                   <button 
                     onClick={onLogout}

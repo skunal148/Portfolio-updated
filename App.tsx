@@ -6,8 +6,9 @@ import { ModernTemplate, ClassicTemplate, CreativeTemplate, ATSTemplate, Minimal
 import { Layout, ArrowLeft, Share2, Edit3 } from 'lucide-react';
 import LandingPage from './components/LandingPage';
 import AuthModal from './components/AuthModal';
-import { auth } from './firebaseConfig';
+import { auth, db } from './firebaseConfig';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 import { getUserPortfolios, createPortfolio, updatePortfolio, deletePortfolio, migrateLocalStorageToFirestore } from './services/portfolioService';
 
 // Initial Dummy Data
@@ -75,6 +76,7 @@ const initialPortfolio: Portfolio = {
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [userName, setUserName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
@@ -86,8 +88,28 @@ const App: React.FC = () => {
 
   // Auth Listener
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      
+      // Fetch user's name from Firestore
+      if (currentUser) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setUserName(`${userData.firstName} ${userData.lastName}`);
+          } else {
+            // Fallback to displayName or email
+            setUserName(currentUser.displayName || currentUser.email || 'User');
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          setUserName(currentUser.displayName || currentUser.email || 'User');
+        }
+      } else {
+        setUserName('');
+      }
+      
       setLoading(false);
     });
     return () => unsubscribe();
@@ -112,10 +134,9 @@ const App: React.FC = () => {
             const migratedPortfolios = await getUserPortfolios(user.uid);
             setPortfolios(migratedPortfolios);
           } else if (firestorePortfolios.length === 0) {
-            // New user - create initial demo portfolio
-            const demoPortfolio = { ...initialPortfolio, id: Date.now().toString() };
-            await createPortfolio(user.uid, demoPortfolio);
-            setPortfolios([demoPortfolio]);
+            // New user with no portfolios - just show empty state
+            // Don't create demo portfolio automatically
+            setPortfolios([]);
           } else {
             // Load existing portfolios from Firestore
             setPortfolios(firestorePortfolios);
@@ -298,6 +319,7 @@ const App: React.FC = () => {
             onView={handleView}
             onLogout={handleLogout}
             userEmail={user.email}
+            userName={userName}
           />
         );
       
