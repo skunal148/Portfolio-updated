@@ -185,16 +185,11 @@ const App: React.FC = () => {
         customTheme: defaultCustomTheme
     };
     
-    try {
-      await createPortfolio(user.uid, newPortfolio);
-      setPortfolios(prev => [newPortfolio, ...prev]);
-      setEditingPortfolio(newPortfolio);
-      setCurrentPortfolioId(newId);
-      setView(AppView.EDITOR);
-    } catch (error) {
-      console.error('Error creating portfolio:', error);
-      alert('Failed to create portfolio. Please try again.');
-    }
+    // Don't save to Firestore yet - only set as editing portfolio
+    // It will be saved when user clicks "Save" button
+    setEditingPortfolio(newPortfolio);
+    setCurrentPortfolioId(newId);
+    setView(AppView.EDITOR);
   };
 
   const handleEdit = (id: string) => {
@@ -231,8 +226,19 @@ const App: React.FC = () => {
       if (!user) return;
       
       try {
-          await updatePortfolio(user.uid, updatedPortfolio);
-          setPortfolios(prev => prev.map(p => p.id === updatedPortfolio.id ? updatedPortfolio : p));
+          // Check if this is a new portfolio (not in portfolios array) or an existing one
+          const isNewPortfolio = !portfolios.find(p => p.id === updatedPortfolio.id);
+          
+          if (isNewPortfolio) {
+              // Create new portfolio in Firestore
+              await createPortfolio(user.uid, updatedPortfolio);
+              setPortfolios(prev => [updatedPortfolio, ...prev]);
+          } else {
+              // Update existing portfolio in Firestore
+              await updatePortfolio(user.uid, updatedPortfolio);
+              setPortfolios(prev => prev.map(p => p.id === updatedPortfolio.id ? updatedPortfolio : p));
+          }
+          
           setEditingPortfolio(null); // Clear editing state
           setView(AppView.DASHBOARD);
           setCurrentPortfolioId(null);
