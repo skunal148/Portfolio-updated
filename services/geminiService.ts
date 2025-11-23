@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { Experience, Profile } from '../types';
 
-const apiKey = process.env.API_KEY || '';
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
 const ai = new GoogleGenAI({ apiKey });
 
 export const enhanceText = async (text: string, type: 'summary' | 'experience'): Promise<string> => {
